@@ -1,0 +1,7 @@
+customer: "ci"
+
+env:
+  PROXY_HOST: "ci-proxy.example.com"
+
+apiKeySecret:
+  name: "ci-proxy-api-key"

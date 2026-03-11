@@ -1,0 +1,73 @@
+replicaCount: 2
+
+image:
+  repository: 123456789012.dkr.ecr.us-east-1.amazonaws.com/proxy
+  tag: latest
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+resources:
+  requests:
+    cpu: 1000m
+    memory: 2048Mi
+  limits:
+    cpu: 1500m
+    memory: 3072Mi
+
+env:
+  PROXY_HOST: ""
+
+customer: ""
+apiUrl: "https://api.espressocomputing.com:25831"
+
+apiKeySecret:
+  name: ""
+
+probes:
+  readiness:
+    enabled: true
+    path: /healthcheck
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  liveness:
+    enabled: true
+    path: /healthcheck
+    initialDelaySeconds: 15
+    periodSeconds: 20
+    timeoutSeconds: 2
+    failureThreshold: 3
+
+service:
+  type: ClusterIP
+  port: 5050
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: alb
+  host: ""
+  alb:
+    certificateArn: ""
+    scheme: internet-facing
+    annotations: {}
+
+autoscaling:
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
