@@ -3,12 +3,12 @@ entries:
   proxy:
   - apiVersion: v2
     appVersion: latest
-    created: "2026-03-11T19:02:45.420639835Z"
+    created: "2026-03-11T19:08:23.672770753Z"
     description: Helm chart for deploying the Espresso proxy service on EKS
-    digest: 660d1027f9323a1277c57645e18d338af29f240d91eab5d48864d2d5e5542fe2
+    digest: adb95863429524ea3ed82bb52946cc9fd85f5dae4eb5a9274e0c3e8defd18d3e
     name: proxy
     type: application
     urls:
     - https://espressocomputing.github.io/espresso-ai-proxy-chart/proxy-0.1.1.tgz
     version: 0.1.1
-generated: "2026-03-11T19:02:45.420017488Z"
+generated: "2026-03-11T19:08:23.672265758Z"
