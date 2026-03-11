@@ -37,23 +37,22 @@ jobs:
           mkdir -p .chart-release
           helm package "${CHART_DIR}" -d .chart-release
 
-      - name: Checkout gh-pages branch
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: gh-pages
-        continue-on-error: true
-
       - name: Build Helm repository content
         run: |
           set -euo pipefail
           mkdir -p repo
 
-          if [ -f gh-pages/index.yaml ]; then
-            cp gh-pages/index.yaml repo/index.yaml
-          fi
-          if ls gh-pages/*.tgz >/dev/null 2>&1; then
-            cp gh-pages/*.tgz repo/
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            git fetch --depth=1 origin gh-pages
+            tmpdir="$(mktemp -d)"
+            git archive FETCH_HEAD | tar -x -C "$tmpdir"
+
+            if [ -f "$tmpdir/index.yaml" ]; then
+              cp "$tmpdir/index.yaml" repo/index.yaml
+            fi
+            if ls "$tmpdir"/*.tgz >/dev/null 2>&1; then
+              cp "$tmpdir"/*.tgz repo/
+            fi
           fi
 
           cp .chart-release/*.tgz repo/
