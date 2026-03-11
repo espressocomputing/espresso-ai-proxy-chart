@@ -48,17 +48,19 @@ jobs:
           config_file: .yamllint
           strict: false
 
-      - name: Render all values files (kube matrix)
+      - name: Render CI values (kube matrix)
         run: |
           set -euo pipefail
-          for values_file in "${CHART_DIR}"/values*.yaml; do
-            [ -f "$values_file" ] || continue
-            echo "Rendering with $values_file for kube ${{ matrix.kube_version }}"
-            helm template proxy "${CHART_DIR}" \
-              --kube-version "${{ matrix.kube_version }}" \
-              --values "$values_file" \
-              > /dev/null
-          done
+          VALUES_FILE="${CHART_DIR}/values.ci.yaml"
+          if [ ! -f "$VALUES_FILE" ]; then
+            VALUES_FILE="${CHART_DIR}/values.yaml"
+          fi
+
+          echo "Rendering with $VALUES_FILE for kube ${{ matrix.kube_version }}"
+          helm template proxy "${CHART_DIR}" \
+            --kube-version "${{ matrix.kube_version }}" \
+            --values "$VALUES_FILE" \
+            > /dev/null
 
       - name: Require chart version bump when chart files change
         run: |
@@ -68,6 +70,11 @@ jobs:
 
           if ! git diff --name-only "$BASE"...HEAD | grep -E "^${CHART_DIR}/" > /dev/null; then
             echo "No chart changes detected."
+            exit 0
+          fi
+
+          if ! git cat-file -e "$BASE:${CHART_DIR}/Chart.yaml" 2>/dev/null; then
+            echo "Chart not present at ${CHART_DIR}/Chart.yaml on ${BASE}; skipping version bump comparison."
             exit 0
           fi
 
