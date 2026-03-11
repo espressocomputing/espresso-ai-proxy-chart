@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "proxy.fullname" . }}
+  labels:
+    {{- include "proxy.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "proxy.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "proxy.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      enableServiceLinks: false
+      serviceAccountName: {{ include "proxy.serviceAccountName" . }}
+      containers:
+      - name: proxy
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.service.port }}
+          protocol: TCP
+        {{- if .Values.probes.readiness.enabled }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.probes.readiness.path }}
+            port: http
+          initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+          timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+          failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+        {{- end }}
+        {{- if .Values.probes.liveness.enabled }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.probes.liveness.path }}
+            port: http
+          initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+          timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+          failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        {{- $customer := required "customer is required and must be non-empty." .Values.customer }}
+        {{- $apiUrl := default "https://api.espressocomputing.com:25831" .Values.apiUrl }}
+        {{- if and (hasKey .Values.env "API_URL") (eq (trim (index .Values.env "API_URL")) "") }}
+        {{- fail "env.API_URL must be non-empty when provided." }}
+        {{- end }}
+        {{- $resolvedApiUrl := default (printf "%s/%s" $apiUrl $customer) (index .Values.env "API_URL") }}
+        {{- $proxyHost := required "env.PROXY_HOST is required and must be non-empty." (index .Values.env "PROXY_HOST") }}
+        {{- if and (hasKey .Values.env "OTEL_EXPORTER_OTLP_ENDPOINT") (eq (trim (index .Values.env "OTEL_EXPORTER_OTLP_ENDPOINT")) "") }}
+        {{- fail "env.OTEL_EXPORTER_OTLP_ENDPOINT must be non-empty when provided." }}
+        {{- end }}
+        {{- $otelEndpoint := default "https://metrics.espressocomputing.com:443" (index .Values.env "OTEL_EXPORTER_OTLP_ENDPOINT") }}
+        env:
+        - name: ENV
+          value: "PROD"
+        - name: Service
+          value: "Proxy"
+        - name: OTEL_EXPORTER_OTLP_PROTOCOL
+          value: "http/protobuf"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: {{ $otelEndpoint | quote }}
+        - name: PROXY_PORT
+          value: "5050"
+        - name: PROXY_HOST
+          value: {{ $proxyHost | quote }}
+        - name: CUSTOMER
+          value: {{ $customer | quote }}
+        - name: API_URL
+          value: {{ $resolvedApiUrl | quote }}
+        {{- range $key, $value := .Values.env }}
+        {{- if and (ne $key "ENV") (ne $key "Service") (ne $key "OTEL_EXPORTER_OTLP_PROTOCOL") (ne $key "OTEL_EXPORTER_OTLP_ENDPOINT") (ne $key "PROXY_PORT") (ne $key "PROXY_HOST") (ne $key "CUSTOMER") (ne $key "API_URL") (ne $key "ESPRESSO_AI_API_KEY") }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        - name: ESPRESSO_AI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ required "apiKeySecret.name is required and must reference an existing Kubernetes Secret." .Values.apiKeySecret.name | quote }}
+              key: "ESPRESSO_AI_API_KEY"
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

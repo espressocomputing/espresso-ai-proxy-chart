@@ -1,0 +1,6 @@
+apiVersion: v2
+name: proxy
+description: Helm chart for deploying the Espresso proxy service on EKS
+type: application
+version: 0.1.1
+appVersion: "latest"
