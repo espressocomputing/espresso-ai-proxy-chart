@@ -1,7 +1,7 @@
 replicaCount: 2
 
 image:
-  repository: 123456789012.dkr.ecr.us-east-1.amazonaws.com/proxy
+  repository: espresso/proxy
   tag: latest
   pullPolicy: IfNotPresent
 
@@ -56,14 +56,47 @@ service:
 
 ingress:
   enabled: false
-  className: alb
+  # Supported values:
+  # - generic: emit only className, hosts, TLS, and user-provided annotations
+  # - aws: add AWS Load Balancer Controller ALB annotations
+  # - azure: add Azure Application Gateway Ingress Controller annotations
+  provider: generic
+  className: ""
   host: ""
-  alb:
+  path: /
+  pathType: Prefix
+  annotations: {}
+  # Supports either the standard ingress TLS list or this shorthand:
+  # tls:
+  #   secretName: proxy-tls
+  #   hosts:
+  #   - proxy.example.com
+  # When hosts is omitted from the shorthand, ingress.host is used.
+  tls: null
+  # Adds a second, hostless /healthcheck rule for external health probes that
+  # do not send the application Host header, such as Azure Front Door probes.
+  healthcheck:
+    enabled: false
+    path: /healthcheck
+    pathType: Prefix
+  aws:
     certificateArn: ""
     scheme: internet-facing
+    targetType: ip
+    listenPorts: '[{"HTTPS":443}]'
+    sslRedirect: "443"
+    healthcheckPath: /healthcheck
+    annotations: {}
+  # Backward-compatible alias for the previous AWS-only values structure.
+  alb: {}
+  azure:
+    sslRedirect: true
+    healthProbePath: /healthcheck
+    appgwSslCertificate: ""
     annotations: {}
 
 autoscaling:
+  enabled: true
   minReplicas: 2
   maxReplicas: 10
   targetCPUUtilizationPercentage: 70

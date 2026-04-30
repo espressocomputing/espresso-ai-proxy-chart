@@ -1,33 +1,107 @@
 {{- if .Values.ingress.enabled -}}
+{{- $provider := default "generic" .Values.ingress.provider -}}
+{{- $aws := default dict .Values.ingress.aws -}}
+{{- $alb := default dict .Values.ingress.alb -}}
+{{- $azure := default dict .Values.ingress.azure -}}
+{{- $className := .Values.ingress.className -}}
+{{- $tls := default list .Values.ingress.tls -}}
+{{- $healthcheck := default dict .Values.ingress.healthcheck -}}
+{{- if not (has $provider (list "generic" "aws" "azure")) -}}
+{{- fail "ingress.provider must be one of: generic, aws, azure" -}}
+{{- end -}}
+{{- if and (eq $provider "aws") (not $className) -}}
+{{- $className = "alb" -}}
+{{- else if and (eq $provider "azure") (not $className) -}}
+{{- $className = "azure/application-gateway" -}}
+{{- end -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "proxy.fullname" . }}
   labels:
     {{- include "proxy.labels" . | nindent 4 }}
+  {{- if or .Values.ingress.annotations (eq $provider "aws") (eq $provider "azure") }}
   annotations:
-    alb.ingress.kubernetes.io/scheme: {{ .Values.ingress.alb.scheme | quote }}
-    alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/certificate-arn: {{ .Values.ingress.alb.certificateArn | quote }}
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
-    alb.ingress.kubernetes.io/ssl-redirect: "443"
-    alb.ingress.kubernetes.io/healthcheck-path: /healthcheck
-    {{- with .Values.ingress.alb.annotations }}
+    {{- if eq $provider "aws" }}
+    {{- $certificateArn := default (index $alb "certificateArn") (index $aws "certificateArn") }}
+    alb.ingress.kubernetes.io/scheme: {{ default (index $alb "scheme") (index $aws "scheme") | default "internet-facing" | quote }}
+    alb.ingress.kubernetes.io/target-type: {{ default (index $alb "targetType") (index $aws "targetType") | default "ip" | quote }}
+    {{- with $certificateArn }}
+    alb.ingress.kubernetes.io/certificate-arn: {{ . | quote }}
+    {{- end }}
+    {{- with default (index $alb "listenPorts") (index $aws "listenPorts") }}
+    alb.ingress.kubernetes.io/listen-ports: {{ . | quote }}
+    {{- end }}
+    {{- with default (index $alb "sslRedirect") (index $aws "sslRedirect") }}
+    alb.ingress.kubernetes.io/ssl-redirect: {{ . | quote }}
+    {{- end }}
+    alb.ingress.kubernetes.io/healthcheck-path: {{ default (index $alb "healthcheckPath") (index $aws "healthcheckPath") | default "/healthcheck" | quote }}
+    {{- with (index $alb "annotations") }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
-spec:
-  ingressClassName: {{ .Values.ingress.className }}
-  rules:
-  - {{- if .Values.ingress.host }}
-    host: {{ .Values.ingress.host | quote }}
+    {{- with (index $aws "annotations") }}
+    {{- toYaml . | nindent 4 }}
     {{- end }}
+    {{- else if eq $provider "azure" }}
+    appgw.ingress.kubernetes.io/health-probe-path: {{ default "/healthcheck" (index $azure "healthProbePath") | quote }}
+    {{- if or (not (hasKey $azure "sslRedirect")) (index $azure "sslRedirect") }}
+    appgw.ingress.kubernetes.io/ssl-redirect: "true"
+    {{- end }}
+    {{- with (index $azure "appgwSslCertificate") }}
+    appgw.ingress.kubernetes.io/appgw-ssl-certificate: {{ . | quote }}
+    {{- end }}
+    {{- with (index $azure "annotations") }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  {{- with $className }}
+  ingressClassName: {{ . | quote }}
+  {{- end }}
+  {{- if $tls }}
+  tls:
+    {{- if kindIs "map" $tls }}
+    - secretName: {{ required "ingress.tls.secretName is required when ingress.tls is a map" (index $tls "secretName") | quote }}
+      {{- if (index $tls "hosts") }}
+      hosts:
+        {{- toYaml (index $tls "hosts") | nindent 8 }}
+      {{- else if .Values.ingress.host }}
+      hosts:
+        - {{ .Values.ingress.host | quote }}
+      {{- end }}
+    {{- else }}
+    {{- toYaml $tls | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  rules:
+  {{- if .Values.ingress.host }}
+  - host: {{ .Values.ingress.host | quote }}
+  {{- else }}
+  -
+  {{- end }}
     http:
       paths:
-      - path: /
-        pathType: Prefix
+      - path: {{ .Values.ingress.path | quote }}
+        pathType: {{ .Values.ingress.pathType }}
         backend:
           service:
             name: {{ include "proxy.fullname" . }}
             port:
               number: {{ .Values.service.port }}
+  {{- if and (index $healthcheck "enabled") .Values.ingress.host }}
+  -
+    http:
+      paths:
+      - path: {{ default "/healthcheck" (index $healthcheck "path") | quote }}
+        pathType: {{ default "Prefix" (index $healthcheck "pathType") }}
+        backend:
+          service:
+            name: {{ include "proxy.fullname" . }}
+            port:
+              number: {{ .Values.service.port }}
+  {{- end }}
 {{- end }}
