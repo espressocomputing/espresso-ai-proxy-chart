@@ -25,7 +25,7 @@ spec:
       serviceAccountName: {{ include "proxy.serviceAccountName" . }}
       containers:
       - name: proxy
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        image: "{{ .Values.image.repository }}:{{ required "image.tag is required and must be non-empty." .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
         - name: http

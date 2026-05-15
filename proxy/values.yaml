@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: espresso/proxy
-  tag: latest
+  tag: ""
   pullPolicy: IfNotPresent
 
 nameOverride: ""
