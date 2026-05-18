@@ -109,8 +109,13 @@ spec:
         - name: otlp-http
           containerPort: 4318
           protocol: TCP
-        {{- if .Values.otelCollector.customer.authSecret.name }}
         env:
+        - name: ESPRESSO_AI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.apiKeySecret.name | quote }}
+              key: "ESPRESSO_AI_API_KEY"
+        {{- if .Values.otelCollector.customer.authSecret.name }}
         - name: CUSTOMER_OTLP_AUTH
           valueFrom:
             secretKeyRef:

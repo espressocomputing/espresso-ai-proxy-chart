@@ -47,6 +47,7 @@ otelCollector:
       cpu: 200m
       memory: 256Mi
   espresso:
+    enabled: true
     endpoint: "https://metrics.espressocomputing.com:443"
   customer:
     endpoint: ""
@@ -60,6 +61,10 @@ otelCollector:
     authSecret:
       name: ""
       key: authorization
+    # When true, the customer exporter sends x-api-key from apiKeySecret.
+    # Use when the customer endpoint is itself an Espresso-hosted collector
+    # (e.g., testing through staging) and you want to reuse the proxy's API key.
+    useEspressoApiKey: false
     tls:
       insecure: false
 

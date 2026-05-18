@@ -1,8 +1,13 @@
 {{- if .Values.otelCollector.enabled }}
+{{- $espressoEnabled := .Values.otelCollector.espresso.enabled }}
 {{- $customerEndpoint := .Values.otelCollector.customer.endpoint }}
 {{- $customerEnabled := ne $customerEndpoint "" }}
+{{- if not (or $espressoEnabled $customerEnabled) }}
+{{- fail "otelCollector requires at least one exporter: set otelCollector.espresso.enabled=true or otelCollector.customer.endpoint." }}
+{{- end }}
 {{- $customerExporter := ternary "otlphttp" "otlp" (eq .Values.otelCollector.customer.protocol "http") }}
 {{- $customerExporterKey := printf "%s/customer" $customerExporter }}
+{{- $customerUseEspressoKey := .Values.otelCollector.customer.useEspressoApiKey }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -21,16 +26,23 @@ data:
     processors:
       batch: {}
     exporters:
+      {{- if $espressoEnabled }}
       otlphttp/espresso:
-        endpoint: {{ required "otelCollector.espresso.endpoint is required." .Values.otelCollector.espresso.endpoint | quote }}
+        endpoint: {{ required "otelCollector.espresso.endpoint is required when espresso is enabled." .Values.otelCollector.espresso.endpoint | quote }}
+        headers:
+          x-api-key: ${env:ESPRESSO_AI_API_KEY}
         sending_queue:
           enabled: true
         retry_on_failure:
           enabled: true
+      {{- end }}
       {{- if $customerEnabled }}
       {{ $customerExporterKey }}:
         endpoint: {{ $customerEndpoint | quote }}
-        {{- if .Values.otelCollector.customer.authSecret.name }}
+        {{- if $customerUseEspressoKey }}
+        headers:
+          x-api-key: ${env:ESPRESSO_AI_API_KEY}
+        {{- else if .Values.otelCollector.customer.authSecret.name }}
         headers:
           authorization: ${env:CUSTOMER_OTLP_AUTH}
         {{- end }}
@@ -45,13 +57,17 @@ data:
       pipelines:
         {{- range $signal := list "traces" "metrics" "logs" }}
         {{- $customerCovers := and $customerEnabled (has $signal $.Values.otelCollector.customer.signals) }}
+        {{- if or $espressoEnabled $customerCovers }}
         {{ $signal }}:
           receivers: [otlp]
           processors: [batch]
           exporters:
+          {{- if $espressoEnabled }}
           - otlphttp/espresso
+          {{- end }}
           {{- if $customerCovers }}
           - {{ $customerExporterKey }}
           {{- end }}
+        {{- end }}
         {{- end }}
 {{- end }}
