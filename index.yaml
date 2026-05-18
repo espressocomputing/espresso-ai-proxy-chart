@@ -3,7 +3,7 @@ entries:
   proxy:
   - apiVersion: v2
     appVersion: latest
-    created: "2026-05-18T20:03:33.172138427Z"
+    created: "2026-05-18T20:18:54.508038897Z"
     description: Helm chart for deploying the Espresso proxy service on Kubernetes
     digest: e5e32cb23a9c70efa2cafd5706c1e45da9d923610707c606f4df253630ad6c99
     name: proxy
@@ -13,7 +13,17 @@ entries:
     version: 0.3.0
   - apiVersion: v2
     appVersion: latest
-    created: "2026-05-18T20:03:33.171212429Z"
+    created: "2026-05-18T20:18:54.50752662Z"
+    description: Helm chart for deploying the Espresso proxy service on Kubernetes
+    digest: d8b7c05718c1a0adaa617adda7aeda820ea293a660aa0f91be67eb740ea964fe
+    name: proxy
+    type: application
+    urls:
+    - https://espressocomputing.github.io/espresso-ai-proxy-chart/proxy-0.3.0-rc2.tgz
+    version: 0.3.0-rc2
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-05-18T20:18:54.50704936Z"
     description: Helm chart for deploying the Espresso proxy service on Kubernetes
     digest: 31f2ea1b00ac2cf9180b5d0be2100f286ee7b60b0dda37405e429719b830cbf3
     name: proxy
@@ -23,7 +33,7 @@ entries:
     version: 0.2.1
   - apiVersion: v2
     appVersion: latest
-    created: "2026-05-18T20:03:33.170373583Z"
+    created: "2026-05-18T20:18:54.506645385Z"
     description: Helm chart for deploying the Espresso proxy service on Kubernetes
     digest: 3ae43c30d65c21b44f8fca008fc347abaef67c3ffbe7d6c07103289f262c9084
     name: proxy
@@ -33,7 +43,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: latest
-    created: "2026-05-18T20:03:33.169555405Z"
+    created: "2026-05-18T20:18:54.506147099Z"
     description: Helm chart for deploying the Espresso proxy service on EKS
     digest: adb95863429524ea3ed82bb52946cc9fd85f5dae4eb5a9274e0c3e8defd18d3e
     name: proxy
@@ -41,4 +51,4 @@ entries:
     urls:
     - https://espressocomputing.github.io/espresso-ai-proxy-chart/proxy-0.1.1.tgz
     version: 0.1.1
-generated: "2026-05-18T20:03:33.168712111Z"
+generated: "2026-05-18T20:18:54.504777597Z"
