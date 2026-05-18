@@ -63,7 +63,11 @@ spec:
         {{- if and (hasKey .Values.env "OTEL_EXPORTER_OTLP_ENDPOINT") (eq (trim (index .Values.env "OTEL_EXPORTER_OTLP_ENDPOINT")) "") }}
         {{- fail "env.OTEL_EXPORTER_OTLP_ENDPOINT must be non-empty when provided." }}
         {{- end }}
-        {{- $otelEndpoint := default "https://metrics.espressocomputing.com:443" (index .Values.env "OTEL_EXPORTER_OTLP_ENDPOINT") }}
+        {{- $otelDefault := "https://metrics.espressocomputing.com:443" }}
+        {{- if .Values.otelCollector.enabled }}
+        {{- $otelDefault = "http://localhost:4318" }}
+        {{- end }}
+        {{- $otelEndpoint := default $otelDefault (index .Values.env "OTEL_EXPORTER_OTLP_ENDPOINT") }}
         env:
         - name: ENV
           value: "PROD"
@@ -92,6 +96,42 @@ spec:
             secretKeyRef:
               name: {{ required "apiKeySecret.name is required and must reference an existing Kubernetes Secret." .Values.apiKeySecret.name | quote }}
               key: "ESPRESSO_AI_API_KEY"
+      {{- if .Values.otelCollector.enabled }}
+      - name: otel-collector
+        image: "{{ .Values.otelCollector.image.repository }}:{{ .Values.otelCollector.image.tag }}"
+        imagePullPolicy: {{ .Values.otelCollector.image.pullPolicy }}
+        args:
+        - --config=/etc/otelcol/config.yaml
+        ports:
+        - name: otlp-grpc
+          containerPort: 4317
+          protocol: TCP
+        - name: otlp-http
+          containerPort: 4318
+          protocol: TCP
+        env:
+        - name: ESPRESSO_AI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.apiKeySecret.name | quote }}
+              key: "ESPRESSO_AI_API_KEY"
+        {{- if .Values.otelCollector.customer.authSecret.name }}
+        - name: CUSTOMER_OTLP_AUTH
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.otelCollector.customer.authSecret.name | quote }}
+              key: {{ .Values.otelCollector.customer.authSecret.key | quote }}
+        {{- end }}
+        volumeMounts:
+        - name: otel-collector-config
+          mountPath: /etc/otelcol
+        resources:
+          {{- toYaml .Values.otelCollector.resources | nindent 10 }}
+      volumes:
+      - name: otel-collector-config
+        configMap:
+          name: {{ include "proxy.fullname" . }}-otel-collector
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
