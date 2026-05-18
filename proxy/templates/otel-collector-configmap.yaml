@@ -1,0 +1,57 @@
+{{- if .Values.otelCollector.enabled }}
+{{- $customerEndpoint := .Values.otelCollector.customer.endpoint }}
+{{- $customerEnabled := ne $customerEndpoint "" }}
+{{- $customerExporter := ternary "otlphttp" "otlp" (eq .Values.otelCollector.customer.protocol "http") }}
+{{- $customerExporterKey := printf "%s/customer" $customerExporter }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "proxy.fullname" . }}-otel-collector
+  labels:
+    {{- include "proxy.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    processors:
+      batch: {}
+    exporters:
+      otlphttp/espresso:
+        endpoint: {{ required "otelCollector.espresso.endpoint is required." .Values.otelCollector.espresso.endpoint | quote }}
+        sending_queue:
+          enabled: true
+        retry_on_failure:
+          enabled: true
+      {{- if $customerEnabled }}
+      {{ $customerExporterKey }}:
+        endpoint: {{ $customerEndpoint | quote }}
+        {{- if .Values.otelCollector.customer.authSecret.name }}
+        headers:
+          authorization: ${env:CUSTOMER_OTLP_AUTH}
+        {{- end }}
+        tls:
+          insecure: {{ .Values.otelCollector.customer.tls.insecure }}
+        sending_queue:
+          enabled: true
+        retry_on_failure:
+          enabled: true
+      {{- end }}
+    service:
+      pipelines:
+        {{- range $signal := list "traces" "metrics" "logs" }}
+        {{- $customerCovers := and $customerEnabled (has $signal $.Values.otelCollector.customer.signals) }}
+        {{ $signal }}:
+          receivers: [otlp]
+          processors: [batch]
+          exporters:
+          - otlphttp/espresso
+          {{- if $customerCovers }}
+          - {{ $customerExporterKey }}
+          {{- end }}
+        {{- end }}
+{{- end }}

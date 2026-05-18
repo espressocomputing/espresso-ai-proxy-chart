@@ -33,6 +33,36 @@ apiUrl: "https://api.espressocomputing.com:25831"
 apiKeySecret:
   name: ""
 
+otelCollector:
+  enabled: true
+  image:
+    repository: otel/opentelemetry-collector-contrib
+    tag: "0.103.0"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  espresso:
+    endpoint: "https://metrics.espressocomputing.com:443"
+  customer:
+    endpoint: ""
+    protocol: grpc
+    signals:
+    - traces
+    - metrics
+    - logs
+    # Secret holding the value for the customer endpoint's Authorization header.
+    # Leave name empty for unauthenticated endpoints.
+    authSecret:
+      name: ""
+      key: authorization
+    tls:
+      insecure: false
+
 probes:
   readiness:
     enabled: true
