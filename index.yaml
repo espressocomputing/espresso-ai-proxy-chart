@@ -3,7 +3,17 @@ entries:
   proxy:
   - apiVersion: v2
     appVersion: latest
-    created: "2026-05-15T17:32:16.971555814Z"
+    created: "2026-05-18T19:56:55.825225583Z"
+    description: Helm chart for deploying the Espresso proxy service on Kubernetes
+    digest: 122000265015306ad034d83fd3d35506346ef78d2d7a8a574c80e414e77293c7
+    name: proxy
+    type: application
+    urls:
+    - https://espressocomputing.github.io/espresso-ai-proxy-chart/proxy-0.3.0.tgz
+    version: 0.3.0
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-05-18T19:56:55.824378666Z"
     description: Helm chart for deploying the Espresso proxy service on Kubernetes
     digest: 31f2ea1b00ac2cf9180b5d0be2100f286ee7b60b0dda37405e429719b830cbf3
     name: proxy
@@ -13,7 +23,7 @@ entries:
     version: 0.2.1
   - apiVersion: v2
     appVersion: latest
-    created: "2026-05-15T17:32:16.971105193Z"
+    created: "2026-05-18T19:56:55.82370345Z"
     description: Helm chart for deploying the Espresso proxy service on Kubernetes
     digest: 3ae43c30d65c21b44f8fca008fc347abaef67c3ffbe7d6c07103289f262c9084
     name: proxy
@@ -23,7 +33,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: latest
-    created: "2026-05-15T17:32:16.970672767Z"
+    created: "2026-05-18T19:56:55.823241591Z"
     description: Helm chart for deploying the Espresso proxy service on EKS
     digest: adb95863429524ea3ed82bb52946cc9fd85f5dae4eb5a9274e0c3e8defd18d3e
     name: proxy
@@ -31,4 +41,4 @@ entries:
     urls:
     - https://espressocomputing.github.io/espresso-ai-proxy-chart/proxy-0.1.1.tgz
     version: 0.1.1
-generated: "2026-05-15T17:32:16.970178926Z"
+generated: "2026-05-18T19:56:55.822717834Z"
