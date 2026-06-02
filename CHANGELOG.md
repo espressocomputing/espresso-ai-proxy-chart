@@ -5,12 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.2]
-
-### Changed
-
-- Remove traces from the signals list
-
 ## [0.3.1]
 
 ### Added
@@ -18,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Explicit RollingUpdate strategy for zero-unavailable deploys.
 - PodDisruptionBudget enabled by default.
 - Configurable `preStop` hook and termination grace period for pod draining.
+
+### Changed
+
+- Remove traces from the signals list
 
 ## [0.3.0]
 
