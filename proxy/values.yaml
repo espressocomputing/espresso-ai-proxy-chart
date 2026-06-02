@@ -60,7 +60,6 @@ otelCollector:
     endpoint: ""
     protocol: grpc
     signals:
-      - traces
       - metrics
       - logs
     # Secret holding the value for the customer endpoint's Authorization header.
