@@ -6,6 +6,8 @@ metadata:
     {{- include "proxy.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    {{- toYaml .Values.deploymentStrategy | nindent 4 }}
   selector:
     matchLabels:
       {{- include "proxy.selectorLabels" . | nindent 6 }}
@@ -23,6 +25,7 @@ spec:
     spec:
       enableServiceLinks: false
       serviceAccountName: {{ include "proxy.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       containers:
       - name: proxy
         image: "{{ .Values.image.repository }}:{{ required "image.tag is required and must be non-empty." .Values.image.tag }}"
@@ -50,6 +53,13 @@ spec:
           periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
           timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
           failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+        {{- end }}
+        {{- if .Values.lifecycle.preStop.enabled }}
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                {{- toYaml .Values.lifecycle.preStop.command | nindent 16 }}
         {{- end }}
         resources:
           {{- toYaml .Values.resources | nindent 10 }}
