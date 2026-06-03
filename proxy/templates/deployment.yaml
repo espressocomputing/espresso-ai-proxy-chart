@@ -95,8 +95,12 @@ spec:
           value: {{ $customer | quote }}
         - name: API_URL
           value: {{ $resolvedApiUrl | quote }}
+        - name: SERVICE_VERSION
+          value: {{ .Values.image.tag | quote }}
+        - name: CHART_VERSION
+          value: {{ .Chart.Version | quote }}
         {{- range $key, $value := .Values.env }}
-        {{- if and (ne $key "ENV") (ne $key "Service") (ne $key "OTEL_EXPORTER_OTLP_PROTOCOL") (ne $key "OTEL_EXPORTER_OTLP_ENDPOINT") (ne $key "PROXY_PORT") (ne $key "PROXY_HOST") (ne $key "CUSTOMER") (ne $key "API_URL") (ne $key "ESPRESSO_AI_API_KEY") }}
+        {{- if and (ne $key "ENV") (ne $key "Service") (ne $key "OTEL_EXPORTER_OTLP_PROTOCOL") (ne $key "OTEL_EXPORTER_OTLP_ENDPOINT") (ne $key "PROXY_PORT") (ne $key "PROXY_HOST") (ne $key "CUSTOMER") (ne $key "API_URL") (ne $key "SERVICE_VERSION") (ne $key "CHART_VERSION") (ne $key "ESPRESSO_AI_API_KEY") }}
         - name: {{ $key }}
           value: {{ $value | quote }}
         {{- end }}
