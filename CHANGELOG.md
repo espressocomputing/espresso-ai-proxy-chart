@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0]
+
+### Added
+
+- `extraEnv` for injecting raw environment variables into the proxy container,
+  supporting `valueFrom` sources (e.g. `fieldRef`, `secretKeyRef`) that the
+  `env` map cannot express.
+- `otelCollector.env` for injecting environment variables into the collector
+  container. These can be referenced from the collector config via
+  `${env:NAME}`, allowing `otelCollector.customer.endpoint` to be set per-node
+  (e.g. `http://${env:NODE_IP}:4318`) while the espresso exporter continues to
+  send telemetry directly.
+
 ## [0.3.2]
 
 ### Added
