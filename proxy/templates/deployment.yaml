@@ -105,6 +105,10 @@ spec:
           value: {{ $value | quote }}
         {{- end }}
         {{- end }}
+        {{- /* Raw env passthrough for advanced cases (valueFrom, fieldRef, etc.). Appended after managed vars; if you need a var referenced via $(VAR), ensure it is defined before the referer. */}}
+        {{- with .Values.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         - name: ESPRESSO_AI_API_KEY
           valueFrom:
             secretKeyRef:
@@ -135,6 +139,10 @@ spec:
             secretKeyRef:
               name: {{ .Values.otelCollector.customer.authSecret.name | quote }}
               key: {{ .Values.otelCollector.customer.authSecret.key | quote }}
+        {{- end }}
+        {{- /* Extra env for the collector. Referenceable in the collector config via ${env:NAME}, e.g. a downward-API NODE_IP for a per-node customer.endpoint. */}}
+        {{- with .Values.otelCollector.env }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
         volumeMounts:
         - name: otel-collector-config
