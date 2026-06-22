@@ -65,20 +65,35 @@ spec:
           {{- toYaml .Values.resources | nindent 10 }}
         {{- $customer := required "customer is required and must be non-empty." .Values.customer }}
         {{- $apiUrl := default "https://api.espressocomputing.com:25831" .Values.apiUrl }}
-        {{- if and (hasKey .Values.env "API_URL") (eq (trim (index .Values.env "API_URL")) "") }}
-        {{- fail "env.API_URL must be non-empty when provided." }}
+        {{- /* Build a lookup of user-provided literal env values for defaulting/validation. */}}
+        {{- $userEnv := dict }}
+        {{- range .Values.env }}
+        {{- if hasKey . "value" }}
+        {{- $_ := set $userEnv .name (.value | toString) }}
         {{- end }}
-        {{- $resolvedApiUrl := default (printf "%s/%s" $apiUrl $customer) (index .Values.env "API_URL") }}
-        {{- $proxyHost := required "env.PROXY_HOST is required and must be non-empty." (index .Values.env "PROXY_HOST") }}
-        {{- if and (hasKey .Values.env "OTEL_EXPORTER_OTLP_ENDPOINT") (eq (trim (index .Values.env "OTEL_EXPORTER_OTLP_ENDPOINT")) "") }}
-        {{- fail "env.OTEL_EXPORTER_OTLP_ENDPOINT must be non-empty when provided." }}
+        {{- end }}
+        {{- if and (hasKey $userEnv "API_URL") (eq (trim (index $userEnv "API_URL")) "") }}
+        {{- fail "env API_URL must be non-empty when provided." }}
+        {{- end }}
+        {{- $resolvedApiUrl := default (printf "%s/%s" $apiUrl $customer) (index $userEnv "API_URL") }}
+        {{- $proxyHost := required "env PROXY_HOST is required and must be provided as a non-empty literal value." (index $userEnv "PROXY_HOST") }}
+        {{- if and (hasKey $userEnv "OTEL_EXPORTER_OTLP_ENDPOINT") (eq (trim (index $userEnv "OTEL_EXPORTER_OTLP_ENDPOINT")) "") }}
+        {{- fail "env OTEL_EXPORTER_OTLP_ENDPOINT must be non-empty when provided." }}
         {{- end }}
         {{- $otelDefault := "https://metrics.espressocomputing.com:443" }}
         {{- if .Values.otelCollector.enabled }}
         {{- $otelDefault = "http://localhost:4318" }}
         {{- end }}
-        {{- $otelEndpoint := default $otelDefault (index .Values.env "OTEL_EXPORTER_OTLP_ENDPOINT") }}
+        {{- $otelEndpoint := default $otelDefault (index $userEnv "OTEL_EXPORTER_OTLP_ENDPOINT") }}
+        {{- /* Names managed by the chart; user entries with these names are ignored here and rendered (with resolved values) in the managed block below. */}}
+        {{- $managed := list "ENV" "Service" "OTEL_EXPORTER_OTLP_PROTOCOL" "OTEL_EXPORTER_OTLP_ENDPOINT" "PROXY_PORT" "PROXY_HOST" "CUSTOMER" "API_URL" "SERVICE_VERSION" "CHART_VERSION" "ESPRESSO_AI_API_KEY" }}
         env:
+        {{- /* Render user-defined env first so valueFrom vars (e.g. NODE_IP) precede the managed vars that may reference them via $(VAR). */}}
+        {{- range .Values.env }}
+        {{- if not (has .name $managed) }}
+        {{- toYaml (list .) | nindent 8 }}
+        {{- end }}
+        {{- end }}
         - name: ENV
           value: "PROD"
         - name: Service
@@ -99,12 +114,6 @@ spec:
           value: {{ .Values.image.tag | quote }}
         - name: CHART_VERSION
           value: {{ .Chart.Version | quote }}
-        {{- range $key, $value := .Values.env }}
-        {{- if and (ne $key "ENV") (ne $key "Service") (ne $key "OTEL_EXPORTER_OTLP_PROTOCOL") (ne $key "OTEL_EXPORTER_OTLP_ENDPOINT") (ne $key "PROXY_PORT") (ne $key "PROXY_HOST") (ne $key "CUSTOMER") (ne $key "API_URL") (ne $key "SERVICE_VERSION") (ne $key "CHART_VERSION") (ne $key "ESPRESSO_AI_API_KEY") }}
-        - name: {{ $key }}
-          value: {{ $value | quote }}
-        {{- end }}
-        {{- end }}
         - name: ESPRESSO_AI_API_KEY
           valueFrom:
             secretKeyRef:

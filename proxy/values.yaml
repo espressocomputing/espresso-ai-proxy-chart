@@ -30,8 +30,28 @@ resources:
     cpu: 1500m
     memory: 3072Mi
 
+# Container environment variables, expressed as a standard Kubernetes env
+# list. Both literal values and valueFrom sources are supported, e.g.:
+#
+#   env:
+#     - name: NODE_IP
+#       valueFrom:
+#         fieldRef:
+#           fieldPath: status.hostIP
+#     - name: PROXY_HOST
+#       value: "proxy.example.com"
+#
+# User-defined entries are rendered before the chart's managed variables, so
+# a value such as "http://$(NODE_IP):4318" can reference them via Kubernetes
+# $(VAR) substitution.
+#
+# Notes:
+# - PROXY_HOST is required and must be provided as a literal value.
+# - API_URL and OTEL_EXPORTER_OTLP_ENDPOINT may be set here to override the
+#   chart defaults; provide them as literal values only.
 env:
-  PROXY_HOST: ""
+  - name: PROXY_HOST
+    value: ""
 
 customer: ""
 apiUrl: "https://api.espressocomputing.com:25831"
