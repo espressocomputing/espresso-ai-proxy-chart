@@ -65,35 +65,20 @@ spec:
           {{- toYaml .Values.resources | nindent 10 }}
         {{- $customer := required "customer is required and must be non-empty." .Values.customer }}
         {{- $apiUrl := default "https://api.espressocomputing.com:25831" .Values.apiUrl }}
-        {{- /* Build a lookup of user-provided literal env values for defaulting/validation. */}}
-        {{- $userEnv := dict }}
-        {{- range .Values.env }}
-        {{- if hasKey . "value" }}
-        {{- $_ := set $userEnv .name (.value | toString) }}
+        {{- if and (hasKey .Values.env "API_URL") (eq (trim (index .Values.env "API_URL")) "") }}
+        {{- fail "env.API_URL must be non-empty when provided." }}
         {{- end }}
-        {{- end }}
-        {{- if and (hasKey $userEnv "API_URL") (eq (trim (index $userEnv "API_URL")) "") }}
-        {{- fail "env API_URL must be non-empty when provided." }}
-        {{- end }}
-        {{- $resolvedApiUrl := default (printf "%s/%s" $apiUrl $customer) (index $userEnv "API_URL") }}
-        {{- $proxyHost := required "env PROXY_HOST is required and must be provided as a non-empty literal value." (index $userEnv "PROXY_HOST") }}
-        {{- if and (hasKey $userEnv "OTEL_EXPORTER_OTLP_ENDPOINT") (eq (trim (index $userEnv "OTEL_EXPORTER_OTLP_ENDPOINT")) "") }}
-        {{- fail "env OTEL_EXPORTER_OTLP_ENDPOINT must be non-empty when provided." }}
+        {{- $resolvedApiUrl := default (printf "%s/%s" $apiUrl $customer) (index .Values.env "API_URL") }}
+        {{- $proxyHost := required "env.PROXY_HOST is required and must be non-empty." (index .Values.env "PROXY_HOST") }}
+        {{- if and (hasKey .Values.env "OTEL_EXPORTER_OTLP_ENDPOINT") (eq (trim (index .Values.env "OTEL_EXPORTER_OTLP_ENDPOINT")) "") }}
+        {{- fail "env.OTEL_EXPORTER_OTLP_ENDPOINT must be non-empty when provided." }}
         {{- end }}
         {{- $otelDefault := "https://metrics.espressocomputing.com:443" }}
         {{- if .Values.otelCollector.enabled }}
         {{- $otelDefault = "http://localhost:4318" }}
         {{- end }}
-        {{- $otelEndpoint := default $otelDefault (index $userEnv "OTEL_EXPORTER_OTLP_ENDPOINT") }}
-        {{- /* Names managed by the chart; user entries with these names are ignored here and rendered (with resolved values) in the managed block below. */}}
-        {{- $managed := list "ENV" "Service" "OTEL_EXPORTER_OTLP_PROTOCOL" "OTEL_EXPORTER_OTLP_ENDPOINT" "PROXY_PORT" "PROXY_HOST" "CUSTOMER" "API_URL" "SERVICE_VERSION" "CHART_VERSION" "ESPRESSO_AI_API_KEY" }}
+        {{- $otelEndpoint := default $otelDefault (index .Values.env "OTEL_EXPORTER_OTLP_ENDPOINT") }}
         env:
-        {{- /* Render user-defined env first so valueFrom vars (e.g. NODE_IP) precede the managed vars that may reference them via $(VAR). */}}
-        {{- range .Values.env }}
-        {{- if not (has .name $managed) }}
-        {{- toYaml (list .) | nindent 8 }}
-        {{- end }}
-        {{- end }}
         - name: ENV
           value: "PROD"
         - name: Service
@@ -114,6 +99,16 @@ spec:
           value: {{ .Values.image.tag | quote }}
         - name: CHART_VERSION
           value: {{ .Chart.Version | quote }}
+        {{- range $key, $value := .Values.env }}
+        {{- if and (ne $key "ENV") (ne $key "Service") (ne $key "OTEL_EXPORTER_OTLP_PROTOCOL") (ne $key "OTEL_EXPORTER_OTLP_ENDPOINT") (ne $key "PROXY_PORT") (ne $key "PROXY_HOST") (ne $key "CUSTOMER") (ne $key "API_URL") (ne $key "SERVICE_VERSION") (ne $key "CHART_VERSION") (ne $key "ESPRESSO_AI_API_KEY") }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        {{- /* Raw env passthrough for advanced cases (valueFrom, fieldRef, etc.). Appended after managed vars; if you need a var referenced via $(VAR), ensure it is defined before the referer. */}}
+        {{- with .Values.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         - name: ESPRESSO_AI_API_KEY
           valueFrom:
             secretKeyRef:
@@ -144,6 +139,10 @@ spec:
             secretKeyRef:
               name: {{ .Values.otelCollector.customer.authSecret.name | quote }}
               key: {{ .Values.otelCollector.customer.authSecret.key | quote }}
+        {{- end }}
+        {{- /* Extra env for the collector. Referenceable in the collector config via ${env:NAME}, e.g. a downward-API NODE_IP for a per-node customer.endpoint. */}}
+        {{- with .Values.otelCollector.env }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
         volumeMounts:
         - name: otel-collector-config

@@ -30,28 +30,23 @@ resources:
     cpu: 1500m
     memory: 3072Mi
 
-# Container environment variables, expressed as a standard Kubernetes env
-# list. Both literal values and valueFrom sources are supported, e.g.:
+# Simple container environment variables as name: value pairs.
+# PROXY_HOST is required. API_URL and OTEL_EXPORTER_OTLP_ENDPOINT may be set
+# here to override the chart defaults. For env vars that need valueFrom
+# (secretKeyRef, fieldRef, etc.), use extraEnv below.
+env:
+  PROXY_HOST: ""
+
+# Raw env entries for advanced cases that env's name: value form can't express
+# (valueFrom, fieldRef, configMapKeyRef, etc.). Passed through verbatim and
+# appended after the chart-managed vars, e.g.:
 #
-#   env:
+#   extraEnv:
 #     - name: NODE_IP
 #       valueFrom:
 #         fieldRef:
 #           fieldPath: status.hostIP
-#     - name: PROXY_HOST
-#       value: "proxy.example.com"
-#
-# User-defined entries are rendered before the chart's managed variables, so
-# a value such as "http://$(NODE_IP):4318" can reference them via Kubernetes
-# $(VAR) substitution.
-#
-# Notes:
-# - PROXY_HOST is required and must be provided as a literal value.
-# - API_URL and OTEL_EXPORTER_OTLP_ENDPOINT may be set here to override the
-#   chart defaults; provide them as literal values only.
-env:
-  - name: PROXY_HOST
-    value: ""
+extraEnv: []
 
 customer: ""
 apiUrl: "https://api.espressocomputing.com:25831"
@@ -72,11 +67,27 @@ otelCollector:
     limits:
       cpu: 200m
       memory: 256Mi
+  # Extra environment variables for the collector container, as a native
+  # Kubernetes env list (literals or valueFrom). The collector expands these
+  # in its config via ${env:NAME} (this is the collector's own substitution,
+  # not the kubelet's $(VAR) syntax). Use this to make customer.endpoint
+  # per-node, e.g.:
+  #
+  #   env:
+  #     - name: NODE_IP
+  #       valueFrom:
+  #         fieldRef:
+  #           fieldPath: status.hostIP
+  #   customer:
+  #     endpoint: "http://${env:NODE_IP}:4318"
+  env: []
   espresso:
     endpoint: "https://metrics.espressocomputing.com:443"
   customer:
     # Endpoint of the customer's own OTLP backend. Leave empty to disable
     # the customer exporter; the espresso pipeline still runs on its own.
+    # Supports the collector's ${env:NAME} substitution (see otelCollector.env),
+    # so it can be made per-node via a downward-API NODE_IP.
     endpoint: ""
     protocol: grpc
     signals:

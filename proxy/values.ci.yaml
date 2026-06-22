@@ -4,8 +4,7 @@ image:
 customer: "ci"
 
 env:
-  - name: PROXY_HOST
-    value: "ci-proxy.example.com"
+  PROXY_HOST: "ci-proxy.example.com"
 
 apiKeySecret:
   name: "ci-proxy-api-key"
